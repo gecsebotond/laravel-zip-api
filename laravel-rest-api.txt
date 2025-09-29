@@ -1,0 +1,405 @@
+Lásd: https://www.youtube.com/watch?v=FoaaTN2i8QY
+
+/**
+ * Laravel telepítése
+ */
+> composer create-project laravel/laravel laravel-rest-api
+
+> cd laravel-rest-api
+
+/**
+ * Laravel .env fájl-ban konfigurációs beállítások megadása
+ */
+ 
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=laravel_rest_api
+DB_USERNAME=root
+DB_PASSWORD=
+
+/**
+ * API hozzáadása
+ */
+ 
+> php artisan install:api
+
+/**
+ * felhasználó hozzáadása a database\seeders\DatabaseSeeder fájlban
+ */
+
+class DatabaseSeeder extends Seeder
+{
+    /**
+     * Seed the application's database.
+     */
+    public function run(): void
+    {
+        // User::factory(10)->create();
+
+        User::factory()->create([
+            'name' => 'user',
+            'email' => 'user@example.com',
+			'password' => '12345678',
+        ]); 
+		
+
+/**
+ * seeder futtatása
+ */
+ 
+> php artisan db:seed		
+
+/**
+ * Controller létrehozása
+ */
+
+> php artisan make:controller UserController 
+
+/**
+ * login hozzáadása a controllerhez
+ */
+
+class UserController extends Controller
+{
+    public function login(Request $request)
+    {
+        $email = $request->input('email');
+        $password = $request->input('password');
+
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
+
+        $user = User::where('email', $email)->first();
+
+        if (!$user || !Hash::check($password, $password ? $user->password : '')) {
+            return response()->json([
+                'message' => 'Invalid email or password',
+            ], 401); // Unauthorized
+        }
+
+        //revoke old tokens
+        $user->tokens()->delete();
+
+        $user->token = $user->createToken('access')->plainTextToken;
+        // abilities can be set https://laravel.com/docs/11.x/sanctum#token-abilities
+        // $token = $user->createToken('access', ['server:update']);
+
+        return response()->json([
+            'user' => $user,
+        ]);
+    } 
+	
+/**
+ * végpont hozzáadása routes\api.php fájlhoz
+ */
+
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\UserController;
+
+Route::post('/users/login', [UsersController::class, 'login']); 
+
+/**
+ * app\Http\Models\User.php
+ * adjuk hozzá a HasApiToens trait-t
+ */
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+
+class User extends Authenticatable
+{
+    use HasApiTokens, HasFactory, Notifiable; 
+	
+/**
+ * A User modellben elrejtük azokat a mezőket, amelyek nem akarunk a response-ban megmutatni
+ */
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [
+        'password',
+        'remember_token',
+        'name',
+        'email_verified_at',
+        'created_at',
+        'updated_at',
+    ]; 
+ 
+/**
+ * GET users végpont hozzáadása
+ * Adja vissza az összes felhasználót
+ * Hitelesítést igényel
+ * UserController-hez adjuk hozzá
+ */
+
+	public function index(Request $request)
+    {
+        $users = User::all();
+        return response()->json([
+            'users' => $users,
+        ]);
+    }
+	
+/**
+ * Az új végpont hozzáadása az api.php-hoz
+ */
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\UsersController;
+
+Route::post('/users/login', [UsersController::class, 'login']); 
+Route::get('/users', [UsersController::class, 'index'])->middleware('auth:sanctum'); 
+
+/**
+ * Új adatbázis tábla definiálása 
+ */
+ 
+> php artisan make:migration create_<table-name>_table
+
+A tábla neve legyen angolul és többes számban!
+
+pl:
+> php artisan make:migration create_products_table
+
+A databes\migrations mappában módosítsuk a létrehozott kódot:
+
+    public function up(): void
+    {
+        Schema::create('products', function (Blueprint $table) {
+            $table->smallInteger('id')->unsigned()->autoIncrement();
+            $table->string('category', 255)->notNull();
+            $table->string('name', 255)->notNull();
+            $table->string('description', 255)->notNull();
+            $table->string('picture', 255)->notNull();
+            $table->mediumInteger('price')->notNull();
+            $table->mediumInteger('stock')->notNull();
+        });
+    }
+	
+/**
+ * Migráció futtatása a fent definiált adattábla létrehozására
+ */
+
+> php artisan migrate 
+
+ 
+/**
+ * Adattábla feltöltése adatokkal (Seeder)
+ */
+
+> php artisan make:seeder ProductsSeeder
+
+/**
+ * Model hozzáadása
+ */
+
+> php artisan make:model <model-name>
+
+pl:
+
+> php artisan make:model Product
+> php artisan make:model ProductCategory
+
+class Product extends Model
+{
+    public $timestamps = false;
+	
+	protected $fillable = [
+        'category',
+        'name',
+        'description',
+        'picture',
+        'price',
+        'stock'
+    ];
+}
+
+/**
+ * Kiválasztott seeder futtatása
+ */ 
+
+> php artisan db:seed --class=ProductsSeeder 
+
+
+/**
+ * ProductController létrehozása
+ */
+
+> php artisan make:controller ProductController
+
+/**
+ * Adatok listázása: index() függvény 
+ */
+ 
+	public function index()
+    {
+        $products = Product::all();
+        return response()->json([
+            'products' => $products,
+        ]);
+    }
+
+	/**
+	 * GET /products végpont hozzáadáas az api.php-hoz
+	 */
+
+	Route::get('/products', [ProductController::class, 'index']); 
+
+/**
+ * Új adatok hozzáadása: store() függvény 
+ */
+ 
+    public function store(ProductRequest $request)
+    {
+        $product = Product::create($request->all());
+
+        return response()->json([
+            'product' => $product,
+        ]);
+    }
+	
+	/**
+	 * POST /products végpont hozzáadása az api.php-hoz
+	 */
+	 
+	 Route::post('/products', [ProductController::class, 'store'])->middleware('auth:sanctum');
+	
+/**
+ * Adatok módosítása: update() függvény
+ */
+
+	public function update(ProductRequest $request, $id)
+	{
+		$product = Product::findOrFail($id);
+		$product->update($request->all());
+
+		return response()->json([
+			'product' => $product,
+		]);
+	} 
+	
+	/** 
+	 * PUT/PATCH /products/{id} végpont hozzáadása az api.php-hoz
+	 */
+	 
+	 Route::put('/products/{id}', [ProductController::class, 'update'])->middleware('auth:sanctum');
+	 
+/**
+ * Adatok törlése: destroy() függvény
+ */	 
+ 
+	public function destroy($id)
+    {
+        $product = Product::findOrFail($id);
+        $product->delete();
+        return response()->json([
+            'message' => 'Product deleted successfully',
+            'id' => $id
+        ]);
+    }
+	
+	/**
+	 * DELETE /products/{} végpont hozzáadása az api.php-hoz
+	 */
+	 
+	 Route::delete('/products/{id}', [ProductController::class, 'destroy'])->middleware('auth:sanctum');
+	 
+/**
+ * Request létrehozása input adatok validásához
+ */
+ 
+ > php artisan make:request <request-name>
+ 
+ pl:
+ 
+ > php artisan make:request ProductRequest
+ 
+	class ProductRequest extends FormRequest
+	{
+		/**
+		 * Determine if the user is authorized to make this request.
+		 */
+		public function authorize(): bool
+		{
+			return true;
+		}
+
+		/**
+		 * Get the validation rules that apply to the request.
+		 *
+		 * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+		 */
+		public function rules(): array
+		{
+			if ($this->method() === 'PUT') {
+				return [
+					'category' => 'nullable|string|min:2',
+					'name' => 'nullable|string|max:255|min:3',
+					'description' => 'nullable|string|min:10',
+					'picture' => 'nullable|string|min:20',
+					'price' => 'nullable|numeric',
+					'stock' => 'nullable|numeric',
+				];
+			}
+			
+			return [
+				'category' => 'required|string|min:2',
+				'name' => 'required|string|max:255|min:3',
+				'description' => 'required|string|min:10',
+				'picture' => 'required|string|min:20',
+				'price' => 'numeric',
+				'stock' => 'nullable|numeric',
+			];
+		}
+	}
+	 
+/**
+ *  Cross-Origin Resource Sharing (CORS) támogatás hozzáadása
+ */
+
+> php artisan config:publish cors
+
+	/**
+	 * config/cors.php
+	 */
+	 
+	return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cross-Origin Resource Sharing (CORS) Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Here you may configure your settings for cross-origin resource sharing
+    | or "CORS". This determines what cross-origin operations may execute
+    | in web browsers. You are free to adjust these settings as needed.
+    |
+    | To learn more: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
+    |
+    */
+
+    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'allowed_methods' => ['OPTIONS', 'GET', 'POST', 'PUT', 'DELETE'],
+    'allowed_origins' => ['http://localhost:8000'],
+    'allowed_origins_patterns' => [],
+    'allowed_headers' => ['*'],
+    'exposed_headers' => [],
+    'max_age' => 0,
+    'supports_credentials' => false,
+
+];

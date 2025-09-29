@@ -1,0 +1,110 @@
+/**
+ * Amikor szülő-gyerek kapcsolat van 2 tábla között
+ * fontos, hogy az idegen kulcs ugyanolyan típusú legyen 
+ * mint a saját kulcs, pl. unsignedBigInteger
+ **/
+ 
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('models', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('maker_id');
+            $table->foreign('maker_id')->references('id')->on('makers');
+            $table->string('name')->index();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('models');
+    }
+};
+
+/**
+ * Kapcsolat a modellek között
+ * hasMany - belongsTo
+ **/
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model as EloquentModel;
+
+class Maker extends EloquentModel
+{
+    use HasFactory;
+    public $timestamps = false;
+
+    protected $fillable = ['name'];
+
+    function models()
+    {
+        return $this->hasMany(Model::class);
+    }
+
+    public function vehicles()
+    {
+        return $this->hasMany(Vehicle::class);
+    }
+}
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model as EloquentModel;
+
+
+class Model extends EloquentModel
+{
+    public $timestamps = false;
+
+    protected $fillable = ['maker_id', 'name'];
+
+    function maker()
+    {
+        return $this->belongsTo(Maker::class);
+    }
+
+    function trims()
+    {
+        return $this->hasMany(Trim::class);
+    }
+
+    public function vehicles()
+    {
+        return $this->hasMany(Vehicle::class);
+    }
+}
+
+/**
+ * Hivatkozás a kódban a szülőre
+ */ 
+ 
+ $model = Model::find($model_id);
+ $maker = $model->maker;
+ 
+/**
+ * Hivatkozás a kódban a gyerekre
+ */ 
+ 
+ $maker = Maker::find($maker_id);
+ $models = $maker->models;
+ 
+ 
