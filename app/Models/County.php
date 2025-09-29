@@ -11,4 +11,10 @@ class County extends Model
 
     protected $table = 'counties';
     protected $guarded = [];
+
+    public function places()
+    {
+        return $this->hasMany(Place::class);
+    }
+
 }

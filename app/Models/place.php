@@ -11,4 +11,10 @@ class place extends Model
 
     protected $table = 'places';
     protected $guarded = [];
+
+    public function county()
+    {
+        return $this->belongsTo(County::class);
+    }
+
 }
