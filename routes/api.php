@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PlaceController;
 use App\Http\Controllers\CountyController;
+use App\Http\Controllers\UserController;
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('places', PlaceController::class)->except(['index', 'show']);
@@ -12,3 +13,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::apiResource('places', PlaceController::class)->only(['index', 'show']);
 Route::apiResource('counties', CountyController::class)->only(['index', 'show']);
+
+Route::post('/users/login', [UserController::class, 'login']);
+Route::get('/users', [UserController::class, 'index'])->middleware('auth:sanctum');
