@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Place;
+use App\Models\County;
 use Illuminate\Http\Request;
 
 class PlaceController extends Controller
@@ -38,6 +39,7 @@ class PlaceController extends Controller
     {
         return Place::with('county')->get();
     }
+
 
     /**
      * @api {get} /places/:id Get a place by ID
@@ -76,6 +78,159 @@ class PlaceController extends Controller
     {
         return Place::with('county')->findOrFail($id);
     }
+
+    /**
+     * @api {get} /counties/:county_id/places/:place_id Get Place in a County
+     * @apiName GetPlaceInCounty
+     * @apiGroup Places
+     * @apiVersion 1.0.0
+     *
+     * @apiParam {Number} county_id County's unique ID.
+     * @apiParam {Number} place_id Place's unique ID within the county.
+     *
+     * @apiSuccess {String} status Status of the response ("success").
+     * @apiSuccess {Object} data Place object.
+     * @apiSuccess {Number} data.id ID of the Place.
+     * @apiSuccess {String} data.postal_code Postal code of the Place.
+     * @apiSuccess {String} data.name Name of the Place.
+     * @apiSuccess {Number} data.county_id ID of the County the Place belongs to.
+     * @apiSuccess {Object} data.county County object.
+     * @apiSuccess {Number} data.county.id ID of the County.
+     * @apiSuccess {String} data.county.name Name of the County.
+     *
+     * @apiSuccessExample {json} Success-Response:
+     * HTTP/1.1 200 OK
+     * {
+     *   "status": "success",
+     *   "data": {
+     *     "id": 21,
+     *     "postal_code": "8128",
+     *     "name": "Aba",
+     *     "county_id": 5,
+     *     "county": {
+     *       "id": 5,
+     *       "name": "Fejér"
+     *     }
+     *   }
+     * }
+     *
+     * @apiError NotFound The County or Place was not found or the Place does not belong to the County.
+     *
+     * @apiErrorExample {json} Error-Response:
+     * HTTP/1.1 404 Not Found
+     * {
+     *   "message": "No query results for model [App\\Models\\Place]."
+     * }
+     */
+    public function showInCounty($countyId, $placeId)
+    {
+        $place = Place::where('county_id', $countyId)
+            ->where('id', $placeId)
+            ->with('county')
+            ->firstOrFail();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $place
+        ]);
+    }
+
+    /**
+     * @api {get} /counties/:county_id/abc Get Place Name Initials
+     * @apiName GetPlaceInitials
+     * @apiGroup Places
+     * @apiVersion 1.0.0
+     *
+     * @apiParam {Number} county_id County's unique ID.
+     *
+     * @apiSuccess {String} status Status of the response ("success").
+     * @apiSuccess {String[]} data Array of unique initials (uppercase) of place names.
+     *
+     * @apiSuccessExample {json} Success-Response:
+     * HTTP/1.1 200 OK
+     * {
+     *   "status": "success",
+     *   "data": ["A", "B", "C", "D", "F", "G"]
+     * }
+     *
+     * @apiError NotFound The County was not found.
+     *
+     * @apiErrorExample {json} Error-Response:
+     * HTTP/1.1 404 Not Found
+     * {
+     *   "message": "No query results for model [App\\Models\\County]."
+     * }
+     */
+    public function getInitialsByCounty($countyId)
+    {
+        $initials = \App\Models\Place::where('county_id', $countyId)
+            ->selectRaw('UPPER(LEFT(name, 1)) as initial')
+            ->distinct()
+            ->orderBy('initial')
+            ->pluck('initial');
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $initials
+        ]);
+    }
+
+    /**
+     * @api {get} /counties/:county_id/abc/:letter Get Places by Initial
+     * @apiName GetPlacesByInitial
+     * @apiGroup Places
+     * @apiVersion 1.0.0
+     *
+     * @apiParam {Number} county_id County's unique ID.
+     * @apiParam {String} letter Initial letter to filter by.
+     *
+     * @apiSuccess {String} status Status of the response ("success").
+     * @apiSuccess {Object[]} data List of matching places.
+     * @apiSuccess {Number} data.id ID of the Place.
+     * @apiSuccess {String} data.postal_code Postal code.
+     * @apiSuccess {String} data.name Name of the Place.
+     * @apiSuccess {Number} data.county_id ID of the County.
+     *
+     * @apiSuccessExample {json} Success-Response:
+     * HTTP/1.1 200 OK
+     * {
+     *   "status": "success",
+     *   "data": [
+     *     {
+     *       "id": 21,
+     *       "postal_code": "8128",
+     *       "name": "Aba",
+     *       "county_id": 5
+     *     },
+     *     {
+     *       "id": 22,
+     *       "postal_code": "8127",
+     *       "name": "Abasár",
+     *       "county_id": 5
+     *     }
+     *   ]
+     * }
+     *
+     * @apiError NotFound County was not found.
+     * @apiErrorExample {json} Error-Response:
+     * HTTP/1.1 404 Not Found
+     * {
+     *   "message": "No query results for model [App\\Models\\County]."
+     * }
+     */
+    public function getPlacesByInitial($countyId, $letter)
+    {
+        $places = \App\Models\Place::where('county_id', $countyId)
+            ->whereRaw('UPPER(LEFT(name, 1)) = ?', [strtoupper($letter)])
+            ->orderBy('name')
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $places
+        ]);
+    }
+
 
     /**
      * @api {post} /places Create a new place
