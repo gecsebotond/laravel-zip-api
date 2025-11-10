@@ -70,7 +70,12 @@ class UserController extends Controller
         $user->token = $user->createToken('access')->plainTextToken;
 
         return response()->json([
-            'user' => $user,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'token' => $user->token,
+            ],
         ]);
     }
 

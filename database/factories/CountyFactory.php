@@ -10,7 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\County>
  */
 class CountyFactory extends Factory
-{
+{   
     
     protected $model = County::class;
     /**
