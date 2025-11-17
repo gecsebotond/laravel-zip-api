@@ -36,13 +36,14 @@ class CountyController extends Controller
      */
     public function index()
     {
-        $counties = County::with('places')->get();
-
+        $counties = County::all();
+    
         return response()->json([
             'status' => 'success',
             'data' => $counties
         ]);
     }
+    
 
     /**
      * @api {get} /counties/:id Get a county by ID

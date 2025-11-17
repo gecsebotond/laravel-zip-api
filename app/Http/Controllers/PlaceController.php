@@ -122,18 +122,16 @@ class PlaceController extends Controller
      *   "message": "No query results for model [App\\Models\\Place]."
      * }
      */
-    public function showInCounty($countyId, $placeId)
-    {
-        $place = Place::where('county_id', $countyId)
-            ->where('id', $placeId)
-            ->with('county')
-            ->firstOrFail();
-
+    public function showPlacesInCounty(County $county)
+    {   
+        $places = $county->places()->get();
+    
         return response()->json([
             'status' => 'success',
-            'data' => $place
+            'data'   => $places
         ]);
     }
+    
 
     /**
      * @api {get} /counties/:county_id/abc Get Place Name Initials
